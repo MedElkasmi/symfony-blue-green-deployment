@@ -1,0 +1,46 @@
+# docker-compose.yml
+version: '3.8' # Using Docker Compose file format version 3.8
+services:
+  # Nginx service: Our entry point and traffic router
+  nginx:
+    image: nginx:latest # Use the latest official Nginx image
+    ports:
+      - '80:80' # Map host port 80 to container port 80 (where Nginx listens)
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro # Mount our custom Nginx config. 'ro' means read-only.
+    depends_on:
+      - blue # Nginx needs the 'blue' app service to be available for initial startup
+      - green # Nginx also needs 'green' to be available (for hostname resolution), even if not serving traffic initially
+    networks:
+      - app-network # Connect to our custom network
+
+  # Blue environment application service
+  blue:
+    build:
+      context: ./symfony_app # Docker will look for Dockerfile in symfony_app directory
+      dockerfile: Dockerfile # Specify the Dockerfile name (optional if named 'Dockerfile')
+    environment:
+      - APP_VERSION=1.0 # Set the application version for the Blue environment
+      - APP_ENV=prod # Symfony environment (e.g., prod, dev)
+      - SYMFONY_APP_SECRET=your_secret_key_here # IMPORTANT: Replace with a random, unique string in production!
+    container_name: blue_app_container # Assign a fixed name to the blue app container
+    networks:
+      - app-network # Connect to our custom network
+
+  # Green environment application service
+  green:
+    build:
+      context: ./symfony_app # Docker will look for Dockerfile in symfony_app directory
+      dockerfile: Dockerfile
+    environment:
+      - APP_VERSION=1.0 # Initially, both Blue and Green run the same version
+      - APP_ENV=prod
+      - SYMFONY_APP_SECRET=your_secret_key_here # IMPORTANT: Replace with a random, unique string in production!
+    container_name: green_app_container # Assign a fixed name to the green app container
+    networks:
+      - app-network # Connect to our custom network
+
+  # Define a custom network for our services to communicate internally
+networks:
+  app-network:
+    driver: bridge # A bridge network allows containers on the same host to communicate
