@@ -24,10 +24,14 @@ FROM php:8.2-apache
     # Copy the Symfony application code into the container
     COPY . /var/www/html/
 
-    # Run Composer install for the application dependencies
-    # --no-dev: Skip dev dependencies (good for production images)
-    # --optimize-autoloader: Optimize Composer's autoloader for faster execution
-    RUN composer install --no-dev --optimize-autoloader
+    # Install Composer dependencies (including dev for initial scripts)
+    # Explicitly set APP_ENV to prod for cache:clear to run in production mode
+    RUN APP_ENV=prod composer install --optimize-autoloader
+
+    # Remove dev dependencies and dump optimized autoloader for production
+    # This ensures dev packages are available for pre-dump scripts (like cache:clear)
+    # but removed for the final production image.
+    RUN APP_ENV=prod composer install --no-dev --optimize-autoloader
 
     # Configure Apache Virtual Host for Symfony
     # Apache's default config points to /var/www/html. Symfony's entry point is /var/www/html/public.
